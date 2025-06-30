@@ -1,145 +1,75 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Settings, Music, Clock, Coffee, LogIn, LogOut, Volume2, SkipForward } from 'lucide-react';
-import SpotifyAPI from './services/spotify';
+import { Play, Pause, RotateCcw, Settings, Music, Volume2, VolumeX } from 'lucide-react';
+import SpotifyAPI from './services/spotify.js';
 
-const App = () => {
+const WORK_TIME = 25 * 60; // 25 minutes in seconds
+const SHORT_BREAK = 5 * 60; // 5 minutes in seconds
+const LONG_BREAK = 15 * 60; // 15 minutes in seconds
+
+function App() {
   // Timer state
-  const [workDuration, setWorkDuration] = useState(() => {
-    const saved = localStorage.getItem('pomodoro-work-duration');
-    return saved ? parseInt(saved) : 25;
-  });
-  const [breakDuration, setBreakDuration] = useState(() => {
-    const saved = localStorage.getItem('pomodoro-break-duration');
-    return saved ? parseInt(saved) : 5;
-  });
-  const [timeLeft, setTimeLeft] = useState(workDuration * 60);
+  const [timeLeft, setTimeLeft] = useState(WORK_TIME);
   const [isRunning, setIsRunning] = useState(false);
-  const [isWorkSession, setIsWorkSession] = useState(true);
-  const [completedSessions, setCompletedSessions] = useState(0);
+  const [currentSession, setCurrentSession] = useState('work'); // 'work', 'shortBreak', 'longBreak'
+  const [sessionCount, setSessionCount] = useState(0);
+  
+  // Settings state
   const [showSettings, setShowSettings] = useState(false);
-
+  const [workTime, setWorkTime] = useState(25);
+  const [shortBreakTime, setShortBreakTime] = useState(5);
+  const [longBreakTime, setLongBreakTime] = useState(15);
+  
   // Spotify state
   const [spotify] = useState(new SpotifyAPI());
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [userProfile, setUserProfile] = useState(null);
-  const [devices, setDevices] = useState([]);
-  const [selectedDevice, setSelectedDevice] = useState(null);
-  const [volume, setVolume] = useState(50);
-
-  // Playlist state
-  const [workPlaylistUrl, setWorkPlaylistUrl] = useState(() => {
-    return localStorage.getItem('pomodoro-work-playlist') || '';
-  });
-  const [breakPlaylistUrl, setBreakPlaylistUrl] = useState(() => {
-    return localStorage.getItem('pomodoro-break-playlist') || '';
-  });
-  const [workPlaylistId, setWorkPlaylistId] = useState('');
-  const [breakPlaylistId, setBreakPlaylistId] = useState('');
-  const [userPlaylists, setUserPlaylists] = useState([]);
-
+  const [playbackState, setPlaybackState] = useState(null);
+  const [playlists, setPlaylists] = useState([]);
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+  
   const intervalRef = useRef(null);
-  const playbackCheckRef = useRef(null);
 
-  // Check for Spotify callback on mount
+  // Initialize app
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('code')) {
-      spotify.handleCallback().then(success => {
+    // Check Spotify authentication
+    const checkSpotifyAuth = async () => {
+      if (spotify.isAuthenticated()) {
+        setIsSpotifyConnected(true);
+        await loadSpotifyData();
+      }
+
+      // Handle OAuth callback
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('code')) {
+        const success = await spotify.handleCallback();
         if (success) {
-          setIsAuthenticated(true);
-          initializeSpotify();
+          setIsSpotifyConnected(true);
+          await loadSpotifyData();
         }
-      });
-    } else if (spotify.isAuthenticated()) {
-      setIsAuthenticated(true);
-      initializeSpotify();
-    }
-  }, []);
-
-  // Initialize Spotify data
-  const initializeSpotify = async () => {
-    try {
-      const [profile, deviceList, playlists] = await Promise.all([
-        spotify.getUserProfile(),
-        spotify.getDevices(),
-        spotify.getUserPlaylists(50)
-      ]);
-      
-      setUserProfile(profile);
-      setDevices(deviceList);
-      setUserPlaylists(playlists.items);
-      
-      // Select the first available device
-      const activeDevice = deviceList.find(d => d.is_active) || deviceList[0];
-      if (activeDevice) {
-        setSelectedDevice(activeDevice.id);
       }
-
-      // Start checking playback state
-      startPlaybackCheck();
-    } catch (error) {
-      console.error('Error initializing Spotify:', error);
-    }
-  };
-
-  // Check playback state periodically
-  const startPlaybackCheck = () => {
-    playbackCheckRef.current = setInterval(async () => {
-      try {
-        const playback = await spotify.getCurrentPlayback();
-        if (playback) {
-          setCurrentTrack(playback.item);
-          setIsPlaying(playback.is_playing);
-          setVolume(playback.device.volume_percent);
-        }
-      } catch (error) {
-        console.error('Error checking playback:', error);
-      }
-    }, 5000);
-  };
-
-  // Cleanup intervals
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      if (playbackCheckRef.current) clearInterval(playbackCheckRef.current);
     };
+
+    checkSpotifyAuth();
   }, []);
 
-  // Save settings to localStorage
-  useEffect(() => {
-    localStorage.setItem('pomodoro-work-duration', workDuration.toString());
-  }, [workDuration]);
+  // Load Spotify data
+  const loadSpotifyData = async () => {
+    try {
+      const [currentPlayback, userPlaylists] = await Promise.all([
+        spotify.getCurrentPlayback(),
+        spotify.getUserPlaylists()
+      ]);
 
-  useEffect(() => {
-    localStorage.setItem('pomodoro-break-duration', breakDuration.toString());
-  }, [breakDuration]);
+      if (currentPlayback) {
+        setCurrentTrack(currentPlayback.item);
+        setPlaybackState(currentPlayback);
+      }
 
-  useEffect(() => {
-    localStorage.setItem('pomodoro-work-playlist', workPlaylistUrl);
-  }, [workPlaylistUrl]);
-
-  useEffect(() => {
-    localStorage.setItem('pomodoro-break-playlist', breakPlaylistUrl);
-  }, [breakPlaylistUrl]);
-
-  // Update timeLeft when durations change
-  useEffect(() => {
-    if (!isRunning) {
-      setTimeLeft(isWorkSession ? workDuration * 60 : breakDuration * 60);
+      setPlaylists(userPlaylists.items || []);
+    } catch (error) {
+      console.error('Error loading Spotify data:', error);
     }
-  }, [workDuration, breakDuration, isWorkSession, isRunning]);
-
-  // Extract playlist IDs from URLs
-  useEffect(() => {
-    setWorkPlaylistId(spotify.extractPlaylistId(workPlaylistUrl) || '');
-  }, [workPlaylistUrl]);
-
-  useEffect(() => {
-    setBreakPlaylistId(spotify.extractPlaylistId(breakPlaylistUrl) || '');
-  }, [breakPlaylistUrl]);
+  };
 
   // Timer logic
   useEffect(() => {
@@ -147,36 +77,87 @@ const App = () => {
       intervalRef.current = setInterval(() => {
         setTimeLeft(prev => prev - 1);
       }, 1000);
-    } else if (timeLeft === 0) {
-      // Session completed
-      if (isWorkSession) {
-        setCompletedSessions(prev => prev + 1);
-        setIsWorkSession(false);
-        setTimeLeft(breakDuration * 60);
-        // Switch to break playlist
-        if (isAuthenticated && breakPlaylistId) {
-          switchPlaylist(breakPlaylistId);
-        }
-      } else {
-        setIsWorkSession(true);
-        setTimeLeft(workDuration * 60);
-        // Switch to work playlist
-        if (isAuthenticated && workPlaylistId) {
-          switchPlaylist(workPlaylistId);
-        }
-      }
-      
-      // Play notification sound
-      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmceAjiR1/LNeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmceAjiR1/LNeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmceAjiR1/LNeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmceA==');
-      audio.play().catch(() => {});
+    } else {
+      clearInterval(intervalRef.current);
     }
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+    return () => clearInterval(intervalRef.current);
+  }, [isRunning, timeLeft]);
+
+  // Handle session completion
+  useEffect(() => {
+    if (timeLeft === 0 && isRunning) {
+      setIsRunning(false);
+      handleSessionComplete();
+    }
+  }, [timeLeft, isRunning]);
+
+  const handleSessionComplete = () => {
+    if (currentSession === 'work') {
+      const newSessionCount = sessionCount + 1;
+      setSessionCount(newSessionCount);
+      
+      if (newSessionCount % 4 === 0) {
+        setCurrentSession('longBreak');
+        setTimeLeft(longBreakTime * 60);
+      } else {
+        setCurrentSession('shortBreak');
+        setTimeLeft(shortBreakTime * 60);
       }
-    };
-  }, [isRunning, timeLeft, isWorkSession, workDuration, breakDuration, workPlaylistId, breakPlaylistId, isAuthenticated]);
+    } else {
+      setCurrentSession('work');
+      setTimeLeft(workTime * 60);
+    }
+
+    // Play notification sound or handle break music
+    if (isSpotifyConnected && currentSession === 'work') {
+      // Pause music for break
+      spotify.pause().catch(console.error);
+    }
+  };
+
+  const startTimer = () => {
+    setIsRunning(true);
+    if (isSpotifyConnected && currentSession === 'work' && selectedPlaylist) {
+      // Start playlist for work session
+      spotify.play(null, selectedPlaylist.uri).catch(console.error);
+    }
+  };
+
+  const pauseTimer = () => {
+    setIsRunning(false);
+    if (isSpotifyConnected) {
+      spotify.pause().catch(console.error);
+    }
+  };
+
+  const resetTimer = () => {
+    setIsRunning(false);
+    if (currentSession === 'work') {
+      setTimeLeft(workTime * 60);
+    } else if (currentSession === 'shortBreak') {
+      setTimeLeft(shortBreakTime * 60);
+    } else {
+      setTimeLeft(longBreakTime * 60);
+    }
+  };
+
+  const skipSession = () => {
+    setTimeLeft(0);
+  };
+
+  const connectSpotify = () => {
+    spotify.authorize();
+  };
+
+  const disconnectSpotify = () => {
+    spotify.logout();
+    setIsSpotifyConnected(false);
+    setCurrentTrack(null);
+    setPlaybackState(null);
+    setPlaylists([]);
+    setSelectedPlaylist(null);
+  };
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -184,97 +165,26 @@ const App = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const toggleTimer = async () => {
-    setIsRunning(!isRunning);
-    
-    if (!isRunning && isAuthenticated) {
-      // Starting timer - play appropriate playlist
-      const playlistId = isWorkSession ? workPlaylistId : breakPlaylistId;
-      if (playlistId) {
-        await switchPlaylist(playlistId);
-      }
+  const getSessionColor = () => {
+    switch (currentSession) {
+      case 'work': return 'text-red-400';
+      case 'shortBreak': return 'text-green-400';
+      case 'longBreak': return 'text-blue-400';
+      default: return 'text-white';
     }
   };
 
-  const resetTimer = () => {
-    setIsRunning(false);
-    setTimeLeft(isWorkSession ? workDuration * 60 : breakDuration * 60);
-  };
-
-  const skipSession = () => {
-    setIsRunning(false);
-    if (isWorkSession) {
-      setCompletedSessions(prev => prev + 1);
-      setIsWorkSession(false);
-      setTimeLeft(breakDuration * 60);
-    } else {
-      setIsWorkSession(true);
-      setTimeLeft(workDuration * 60);
+  const getSessionTitle = () => {
+    switch (currentSession) {
+      case 'work': return 'Focus Time';
+      case 'shortBreak': return 'Short Break';
+      case 'longBreak': return 'Long Break';
+      default: return 'Pomodoro Timer';
     }
   };
-
-  const switchPlaylist = async (playlistId) => {
-    try {
-      if (selectedDevice) {
-        await spotify.play(selectedDevice, `spotify:playlist:${playlistId}`);
-      } else {
-        await spotify.play(null, `spotify:playlist:${playlistId}`);
-      }
-    } catch (error) {
-      console.error('Error switching playlist:', error);
-    }
-  };
-
-  const togglePlayback = async () => {
-    try {
-      if (isPlaying) {
-        await spotify.pause();
-      } else {
-        await spotify.play(selectedDevice);
-      }
-    } catch (error) {
-      console.error('Error toggling playback:', error);
-    }
-  };
-
-  const handleVolumeChange = async (newVolume) => {
-    setVolume(newVolume);
-    try {
-      await spotify.setVolume(newVolume);
-    } catch (error) {
-      console.error('Error setting volume:', error);
-    }
-  };
-
-  const handleLogin = () => {
-    spotify.authorize();
-  };
-
-  const handleLogout = () => {
-    spotify.logout();
-    setIsAuthenticated(false);
-    setCurrentTrack(null);
-    setIsPlaying(false);
-    setUserProfile(null);
-    setDevices([]);
-    setSelectedDevice(null);
-    if (playbackCheckRef.current) {
-      clearInterval(playbackCheckRef.current);
-    }
-  };
-
-  const presets = [
-    { name: 'Classic', work: 25, break: 5 },
-    { name: 'Extended', work: 45, break: 15 },
-    { name: 'Power Hour', work: 50, break: 10 },
-    { name: 'Quick Sprint', work: 15, break: 3 }
-  ];
-
-  const progress = isWorkSession 
-    ? ((workDuration * 60 - timeLeft) / (workDuration * 60)) * 100
-    : ((breakDuration * 60 - timeLeft) / (breakDuration * 60)) * 100;
 
   return (
+<<<<<<< Updated upstream
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 w-full max-w-md shadow-2xl border border-white/10">
         
@@ -413,247 +323,194 @@ const App = () => {
 
         {/* Controls */}
         <div className="flex justify-center gap-2 mb-3">
+=======
+    <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+      {/* Header */}
+      <header className="flex justify-between items-center p-6">
+        <h1 className="text-2xl font-bold">Pomodoro Timer</h1>
+        <div className="flex gap-4">
           <button
-            onClick={toggleTimer}
-            className={`p-3 rounded-full transition-all duration-200 ${
-              isRunning 
-                ? 'bg-red-500 hover:bg-red-600' 
-                : 'bg-green-500 hover:bg-green-600'
-            } shadow-lg`}
+            onClick={() => setShowSettings(!showSettings)}
+            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
           >
-            {isRunning ? <Pause size={20} className="text-white" /> : <Play size={20} className="text-white" />}
+            <Settings size={24} />
+          </button>
+          {isSpotifyConnected ? (
+            <button
+              onClick={disconnectSpotify}
+              className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-green-400"
+            >
+              <Music size={24} />
+            </button>
+          ) : (
+            <button
+              onClick={connectSpotify}
+              className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <Music size={24} />
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Main Timer */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6">
+        <div className="text-center mb-8">
+          <h2 className={`text-3xl font-semibold mb-4 ${getSessionColor()}`}>
+            {getSessionTitle()}
+          </h2>
+          <div className="text-8xl font-mono font-bold mb-8">
+            {formatTime(timeLeft)}
+          </div>
+          <div className="text-gray-400 mb-6">
+            Session {sessionCount + 1}
+          </div>
+        </div>
+
+        {/* Timer Controls */}
+        <div className="flex gap-4 mb-8">
+>>>>>>> Stashed changes
+          <button
+            onClick={isRunning ? pauseTimer : startTimer}
+            className="bg-blue-600 hover:bg-blue-700 px-8 py-4 rounded-lg flex items-center gap-2 transition-colors"
+          >
+            {isRunning ? <Pause size={24} /> : <Play size={24} />}
+            {isRunning ? 'Pause' : 'Start'}
           </button>
           <button
             onClick={resetTimer}
-            className="p-3 rounded-full bg-gray-500 hover:bg-gray-600 transition-all duration-200 shadow-lg"
+            className="bg-gray-600 hover:bg-gray-700 px-6 py-4 rounded-lg flex items-center gap-2 transition-colors"
           >
-            <RotateCcw size={20} className="text-white" />
+            <RotateCcw size={20} />
+            Reset
           </button>
           <button
             onClick={skipSession}
-            className="p-3 rounded-full bg-blue-500 hover:bg-blue-600 transition-all duration-200 shadow-lg"
-            title="Skip to next session"
+            className="bg-gray-600 hover:bg-gray-700 px-6 py-4 rounded-lg transition-colors"
           >
-            <SkipForward size={20} className="text-white" />
-          </button>
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-3 rounded-full bg-purple-500 hover:bg-purple-600 transition-all duration-200 shadow-lg"
-          >
-            <Settings size={20} className="text-white" />
+            Skip
           </button>
         </div>
 
-        {/* Spotify Playback Controls */}
-        {isAuthenticated && (
-          <div className="mb-4 p-4 bg-white/5 rounded-lg border border-white/10">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Music size={16} className="text-green-400" />
-                <span className="text-white/80 text-sm font-medium">Spotify</span>
+        {/* Spotify Status */}
+        {isSpotifyConnected && currentTrack && (
+          <div className="bg-gray-800 rounded-lg p-4 max-w-md w-full mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center">
+                {currentTrack.album?.images?.[0] ? (
+                  <img 
+                    src={currentTrack.album.images[0].url} 
+                    alt="Album art" 
+                    className="w-full h-full rounded-lg object-cover"
+                  />
+                ) : (
+                  <Music size={20} />
+                )}
               </div>
-              <button
-                onClick={togglePlayback}
-                className="p-2 rounded-full bg-green-600 hover:bg-green-700 transition-colors"
-              >
-                {isPlaying ? <Pause size={16} className="text-white" /> : <Play size={16} className="text-white" />}
-              </button>
-            </div>
-            
-            {currentTrack && (
-              <div className="mb-3">
-                <div className="text-white text-sm font-medium truncate">
-                  {currentTrack.name}
-                </div>
-                <div className="text-white/60 text-xs truncate">
-                  {currentTrack.artists.map(a => a.name).join(', ')}
-                </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">{currentTrack.name}</p>
+                <p className="text-xs text-gray-400 truncate">
+                  {currentTrack.artists?.map(a => a.name).join(', ')}
+                </p>
               </div>
-            )}
-
-            {/* Volume Control */}
-            <div className="flex items-center gap-2">
-              <Volume2 size={14} className="text-white/60" />
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={volume}
-                onChange={(e) => handleVolumeChange(parseInt(e.target.value))}
-                className="flex-1 h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
-              />
-              <span className="text-white/60 text-xs w-8">{volume}</span>
+              <div className="text-green-400">
+                {playbackState?.is_playing ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              </div>
             </div>
           </div>
         )}
+      </main>
 
-        {/* Settings Modal */}
-        {showSettings && (
-          <div 
-className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-            onClick={() => setShowSettings(false)}
-          >
-            <div 
-              className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 w-full max-w-md shadow-2xl border border-white/20 max-h-[80vh] overflow-y-auto custom-scrollbar"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-semibold text-lg">Settings</h3>
-                <button
-                  onClick={() => setShowSettings(false)}
-                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                >
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold mb-6">Settings</h3>
+            
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">Work Time (minutes)</label>
+                <input
+                  type="number"
+                  value={workTime}
+                  onChange={(e) => setWorkTime(Number(e.target.value))}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
+                  min="1"
+                  max="60"
+                />
               </div>
               
-              <div className="space-y-4">
-                {/* Quick Presets */}
-                <div>
-                  <label className="block text-white/80 text-sm mb-2">Quick Presets</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {presets.map((preset) => (
-                      <button
-                        key={preset.name}
-                        onClick={() => {
-                          setWorkDuration(preset.work);
-                          setBreakDuration(preset.break);
-                        }}
-                        className="p-2 text-xs bg-white/10 hover:bg-white/20 rounded text-white transition-all duration-200"
-                      >
-                        {preset.name}<br />
-                        <span className="text-white/60">{preset.work}/{preset.break}min</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Custom Durations */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/80 text-sm mb-1">Work (min)</label>
-                    <input
-                      type="number"
-                      min="5"
-                      max="60"
-                      value={workDuration}
-                      onChange={(e) => setWorkDuration(parseInt(e.target.value) || 25)}
-                      className="w-full p-2 bg-white/10 border border-white/20 rounded text-white placeholder-white/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/80 text-sm mb-1">Break (min)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="30"
-                      value={breakDuration}
-                      onChange={(e) => setBreakDuration(parseInt(e.target.value) || 5)}
-                      className="w-full p-2 bg-white/10 border border-white/20 rounded text-white placeholder-white/50"
-                    />
-                  </div>
-                </div>
-
-                {/* Spotify Device Selection */}
-                {isAuthenticated && devices.length > 0 && (
-                  <div>
-                    <label className="block text-white/80 text-sm mb-2">Playback Device</label>
-                    <select
-                      value={selectedDevice || ''}
-                      onChange={(e) => setSelectedDevice(e.target.value)}
-                      className="w-full p-2 bg-white/10 border border-white/20 rounded text-white"
-                    >
-                      <option value="">Select device...</option>
-                      {devices.map((device) => (
-                        <option key={device.id} value={device.id} className="bg-gray-800">
-                          {device.name} {device.is_active ? '(Active)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Spotify Playlists */}
-                <div className="space-y-3">
-                  <h4 className="text-white/80 text-sm font-medium">Spotify Playlists</h4>
-                  
-                  {/* Work Playlist */}
-                  <div>
-                    <label className="block text-white/70 text-xs mb-1">Work Session Playlist</label>
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        placeholder="https://open.spotify.com/playlist/..."
-                        value={workPlaylistUrl}
-                        onChange={(e) => setWorkPlaylistUrl(e.target.value)}
-                        className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white placeholder-white/50"
-                      />
-                      {isAuthenticated && (
-                        <select
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setWorkPlaylistUrl(`https://open.spotify.com/playlist/${e.target.value}`);
-                            }
-                          }}
-                          className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white"
-                        >
-                          <option value="" className="bg-gray-800">Choose from your playlists...</option>
-                          {userPlaylists.map((playlist) => (
-                            <option key={playlist.id} value={playlist.id} className="bg-gray-800">
-                              {playlist.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Break Playlist */}
-                  <div>
-                    <label className="block text-white/70 text-xs mb-1">Break Playlist</label>
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        placeholder="https://open.spotify.com/playlist/..."
-                        value={breakPlaylistUrl}
-                        onChange={(e) => setBreakPlaylistUrl(e.target.value)}
-                        className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white placeholder-white/50"
-                      />
-                      {isAuthenticated && (
-                        <select
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setBreakPlaylistUrl(`https://open.spotify.com/playlist/${e.target.value}`);
-                            }
-                          }}
-                          className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white"
-                        >
-                          <option value="" className="bg-gray-800">Choose from your Spotify playlists...</option>
-                          {userPlaylists.map((playlist) => (
-                            <option key={playlist.id} value={playlist.id} className="bg-gray-800">
-                              {playlist.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {!isAuthenticated && (
-                    <p className="text-white/50 text-xs">
-                      Sign in with Spotify to see your playlists and control playback directly.
-                    </p>
-                  )}
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Short Break (minutes)</label>
+                <input
+                  type="number"
+                  value={shortBreakTime}
+                  onChange={(e) => setShortBreakTime(Number(e.target.value))}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
+                  min="1"
+                  max="30"
+                />
               </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Long Break (minutes)</label>
+                <input
+                  type="number"
+                  value={longBreakTime}
+                  onChange={(e) => setLongBreakTime(Number(e.target.value))}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
+                  min="1"
+                  max="60"
+                />
+              </div>
+
+              {isSpotifyConnected && playlists.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Work Playlist</label>
+                  <select
+                    value={selectedPlaylist?.id || ''}
+                    onChange={(e) => {
+                      const playlist = playlists.find(p => p.id === e.target.value);
+                      setSelectedPlaylist(playlist);
+                    }}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
+                  >
+                    <option value="">No playlist</option>
+                    {playlists.map(playlist => (
+                      <option key={playlist.id} value={playlist.id}>
+                        {playlist.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  // Apply settings
+                  if (currentSession === 'work') setTimeLeft(workTime * 60);
+                  else if (currentSession === 'shortBreak') setTimeLeft(shortBreakTime * 60);
+                  else setTimeLeft(longBreakTime * 60);
+                  setShowSettings(false);
+                }}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 py-2 rounded-lg transition-colors"
+              >
+                Apply
+              </button>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 py-2 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
-export default App;
+export default App; 
