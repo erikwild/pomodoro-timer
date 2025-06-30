@@ -276,11 +276,11 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
-      <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 w-full max-w-md shadow-2xl border border-white/20">
+      <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 w-full max-w-xs shadow-2xl border border-white/20">
         
         {/* Header */}
-        <div className="text-center mb-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="text-center mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               {isWorkSession ? (
                 <Clock className="text-green-400" size={24} />
@@ -326,7 +326,7 @@ const App = () => {
         </div>
 
         {/* Progress Ring */}
-        <div className="relative w-24 h-24 mx-auto mb-6">
+        <div className="relative w-20 h-20 mx-auto mb-4">
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
             <circle
               cx="50"
@@ -362,35 +362,35 @@ const App = () => {
         </div>
 
         {/* Controls */}
-        <div className="flex justify-center gap-3 mb-4">
+        <div className="flex justify-center gap-2 mb-3">
           <button
             onClick={toggleTimer}
-            className={`p-4 rounded-full transition-all duration-200 ${
+            className={`p-3 rounded-full transition-all duration-200 ${
               isRunning 
                 ? 'bg-red-500 hover:bg-red-600' 
                 : 'bg-green-500 hover:bg-green-600'
             } shadow-lg`}
           >
-            {isRunning ? <Pause size={24} className="text-white" /> : <Play size={24} className="text-white" />}
+            {isRunning ? <Pause size={20} className="text-white" /> : <Play size={20} className="text-white" />}
           </button>
           <button
             onClick={resetTimer}
-            className="p-4 rounded-full bg-gray-500 hover:bg-gray-600 transition-all duration-200 shadow-lg"
+            className="p-3 rounded-full bg-gray-500 hover:bg-gray-600 transition-all duration-200 shadow-lg"
           >
-            <RotateCcw size={24} className="text-white" />
+            <RotateCcw size={20} className="text-white" />
           </button>
           <button
             onClick={skipSession}
-            className="p-4 rounded-full bg-blue-500 hover:bg-blue-600 transition-all duration-200 shadow-lg"
+            className="p-3 rounded-full bg-blue-500 hover:bg-blue-600 transition-all duration-200 shadow-lg"
             title="Skip to next session"
           >
-            <SkipForward size={24} className="text-white" />
+            <SkipForward size={20} className="text-white" />
           </button>
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="p-4 rounded-full bg-purple-500 hover:bg-purple-600 transition-all duration-200 shadow-lg"
+            className="p-3 rounded-full bg-purple-500 hover:bg-purple-600 transition-all duration-200 shadow-lg"
           >
-            <Settings size={24} className="text-white" />
+            <Settings size={20} className="text-white" />
           </button>
         </div>
 
@@ -440,8 +440,9 @@ const App = () => {
         {/* Settings Modal */}
         {showSettings && (
           <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
             onClick={() => setShowSettings(false)}
+            style={{zIndex: 9999}}
           >
             <div 
               className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 w-full max-w-md shadow-2xl border border-white/20 max-h-[80vh] overflow-y-auto custom-scrollbar"
