@@ -38,6 +38,8 @@ const App = () => {
   const [workPlaylistId, setWorkPlaylistId] = useState('');
   const [breakPlaylistId, setBreakPlaylistId] = useState('');
   const [userPlaylists, setUserPlaylists] = useState([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState(null);
 
   const intervalRef = useRef(null);
   const playbackCheckRef = useRef(null);
@@ -263,6 +265,35 @@ const App = () => {
     }
   };
 
+  const handlePlayPause = async () => {
+    try {
+      if (isPlaying) {
+        await spotify.pause();
+        setIsPlaying(false);
+      } else {
+        await spotify.play();
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('Error controlling playback:', error);
+    }
+  };
+
+  const updatePlaybackState = async () => {
+    try {
+      const playback = await spotify.getCurrentPlayback();
+      if (playback) {
+        setIsPlaying(playback.is_playing);
+        setCurrentTrack(playback.item);
+      } else {
+        setIsPlaying(false);
+        setCurrentTrack(null);
+      }
+    } catch (error) {
+      console.error('Error getting playback state:', error);
+    }
+  };
+
 
   const progress = isWorkSession 
     ? ((workDuration * 60 - timeLeft) / (workDuration * 60)) * 100
@@ -289,9 +320,17 @@ const App = () => {
                 </h1>
                 <p className="text-white/60 text-sm">Session {completedSessions + 1}</p>
                 {isAuthenticated && userProfile && (
-                  <p className="text-emerald-400 text-xs font-medium">
-                    Hello, {userProfile.display_name || userProfile.id}!
-                  </p>
+                  <div className="flex flex-col items-center mt-2">
+                    <p className="text-emerald-400 text-xs font-medium mb-2">
+                      Hello, {userProfile.display_name || userProfile.id}!
+                    </p>
+                    <button
+                      onClick={handleLogout}
+                      className="px-3 py-1 text-xs text-white/70 hover:text-white transition-colors hover:bg-white/10 rounded-full border border-white/20"
+                    >
+                      Logout from Spotify
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -307,13 +346,6 @@ const App = () => {
                       className="w-8 h-8 rounded-full border-2 border-white/20"
                     />
                   )}
-                  <button
-                    onClick={handleLogout}
-                    className="p-2 text-white/70 hover:text-white transition-colors hover:bg-white/10 rounded-full"
-                    title="Logout"
-                  >
-                    <LogOut size={16} />
-                  </button>
                 </div>
               ) : (
                 <button
@@ -400,6 +432,19 @@ const App = () => {
           >
             <SkipForward size={20} className="text-white" />
           </button>
+          {isAuthenticated && (
+            <button
+              onClick={handlePlayPause}
+              className={`p-3 rounded-full transition-all duration-200 shadow-lg ${
+                isPlaying 
+                  ? 'bg-orange-500 hover:bg-orange-600' 
+                  : 'bg-green-500 hover:bg-green-600'
+              }`}
+              title={isPlaying ? 'Pause music' : 'Play music'}
+            >
+              {isPlaying ? <Pause size={20} className="text-white" /> : <Play size={20} className="text-white" />}
+            </button>
+          )}
           <button
             onClick={() => setShowSettings(!showSettings)}
             className="p-3 rounded-full bg-purple-500 hover:bg-purple-600 transition-all duration-200 shadow-lg"
