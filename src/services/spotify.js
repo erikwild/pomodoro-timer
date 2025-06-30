@@ -2,7 +2,7 @@
 
 class SpotifyAPI {
   constructor() {
-    this.clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
+    this.clientId = import.meta.env.CLIENT_ID;
     this.redirectUri = import.meta.env.VITE_SPOTIFY_REDIRECT_URI || window.location.origin;
     this.scope = 'user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative';
     this.accessToken = localStorage.getItem('spotify_access_token');
