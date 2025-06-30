@@ -1,6 +1,6 @@
 {
   "name": "pomodoro-spotify-timer",
-  "version": "1.0.0",
+  "version": "0.1.2",
   "description": "A customizable Pomodoro timer with Spotify Web API integration",
   "main": "index.js",
   "scripts": {
@@ -35,6 +35,6 @@
     "react",
     "web-api"
   ],
-  "author": "Your Name",
+  "author": "Erik Wild",
   "license": "MIT"
 }
