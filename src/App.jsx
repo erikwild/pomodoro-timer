@@ -27,6 +27,16 @@ function App() {
   const [playlists, setPlaylists] = useState([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   
+  // Playlist state for work and break
+  const [workPlaylistUrl, setWorkPlaylistUrl] = useState(() => {
+    return localStorage.getItem('pomodoro-work-playlist') || '';
+  });
+  const [breakPlaylistUrl, setBreakPlaylistUrl] = useState(() => {
+    return localStorage.getItem('pomodoro-break-playlist') || '';
+  });
+  const [workPlaylistId, setWorkPlaylistId] = useState('');
+  const [breakPlaylistId, setBreakPlaylistId] = useState('');
+  
   const intervalRef = useRef(null);
 
   // Initialize app
@@ -71,6 +81,24 @@ function App() {
     }
   };
 
+  // Save playlist URLs to localStorage
+  useEffect(() => {
+    localStorage.setItem('pomodoro-work-playlist', workPlaylistUrl);
+  }, [workPlaylistUrl]);
+
+  useEffect(() => {
+    localStorage.setItem('pomodoro-break-playlist', breakPlaylistUrl);
+  }, [breakPlaylistUrl]);
+
+  // Extract playlist IDs from URLs
+  useEffect(() => {
+    setWorkPlaylistId(spotify.extractPlaylistId(workPlaylistUrl) || '');
+  }, [workPlaylistUrl]);
+
+  useEffect(() => {
+    setBreakPlaylistId(spotify.extractPlaylistId(breakPlaylistUrl) || '');
+  }, [breakPlaylistUrl]);
+
   // Timer logic
   useEffect(() => {
     if (isRunning && timeLeft > 0) {
@@ -100,27 +128,36 @@ function App() {
       if (newSessionCount % 4 === 0) {
         setCurrentSession('longBreak');
         setTimeLeft(longBreakTime * 60);
+        // Switch to break playlist
+        if (isSpotifyConnected && breakPlaylistId) {
+          switchPlaylist(breakPlaylistId);
+        }
       } else {
         setCurrentSession('shortBreak');
         setTimeLeft(shortBreakTime * 60);
+        // Switch to break playlist
+        if (isSpotifyConnected && breakPlaylistId) {
+          switchPlaylist(breakPlaylistId);
+        }
       }
     } else {
       setCurrentSession('work');
       setTimeLeft(workTime * 60);
-    }
-
-    // Play notification sound or handle break music
-    if (isSpotifyConnected && currentSession === 'work') {
-      // Pause music for break
-      spotify.pause().catch(console.error);
+      // Switch to work playlist
+      if (isSpotifyConnected && workPlaylistId) {
+        switchPlaylist(workPlaylistId);
+      }
     }
   };
 
   const startTimer = () => {
     setIsRunning(true);
-    if (isSpotifyConnected && currentSession === 'work' && selectedPlaylist) {
-      // Start playlist for work session
-      spotify.play(null, selectedPlaylist.uri).catch(console.error);
+    if (isSpotifyConnected && currentSession === 'work' && workPlaylistId) {
+      // Start work playlist for work session
+      switchPlaylist(workPlaylistId);
+    } else if (isSpotifyConnected && currentSession !== 'work' && breakPlaylistId) {
+      // Start break playlist for break session
+      switchPlaylist(breakPlaylistId);
     }
   };
 
@@ -159,6 +196,14 @@ function App() {
     setSelectedPlaylist(null);
   };
 
+  const switchPlaylist = async (playlistId) => {
+    try {
+      await spotify.play(null, `spotify:playlist:${playlistId}`);
+    } catch (error) {
+      console.error('Error switching playlist:', error);
+    }
+  };
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -182,6 +227,13 @@ function App() {
       default: return 'Pomodoro Timer';
     }
   };
+
+  const presets = [
+    { name: 'Classic', work: 25, break: 5 },
+    { name: 'Extended', work: 45, break: 15 },
+    { name: 'Power Hour', work: 50, break: 10 },
+    { name: 'Quick Sprint', work: 15, break: 3 }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col">
@@ -282,70 +334,175 @@ function App() {
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold mb-6">Settings</h3>
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          onClick={() => setShowSettings(false)}
+        >
+          <div 
+            className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 w-full max-w-md shadow-2xl border border-white/20 max-h-[80vh] overflow-y-auto custom-scrollbar"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-white font-semibold text-xl">Settings</h3>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">Work Time (minutes)</label>
-                <input
-                  type="number"
-                  value={workTime}
-                  onChange={(e) => setWorkTime(Number(e.target.value))}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
-                  min="1"
-                  max="60"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Short Break (minutes)</label>
-                <input
-                  type="number"
-                  value={shortBreakTime}
-                  onChange={(e) => setShortBreakTime(Number(e.target.value))}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
-                  min="1"
-                  max="30"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Long Break (minutes)</label>
-                <input
-                  type="number"
-                  value={longBreakTime}
-                  onChange={(e) => setLongBreakTime(Number(e.target.value))}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
-                  min="1"
-                  max="60"
-                />
+            <div className="space-y-6">
+              {/* Quick Presets Section */}
+              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                <h4 className="text-white/80 text-sm font-medium mb-3">Quick Presets</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {presets.map((preset) => (
+                    <button
+                      key={preset.name}
+                      onClick={() => {
+                        setWorkTime(preset.work);
+                        setShortBreakTime(preset.break);
+                        setLongBreakTime(preset.break * 3);
+                      }}
+                      className="p-3 text-xs bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all duration-200"
+                    >
+                      <div className="font-medium">{preset.name}</div>
+                      <div className="text-white/60 mt-1">{preset.work}/{preset.break}min</div>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {isSpotifyConnected && playlists.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium mb-2">Work Playlist</label>
-                  <select
-                    value={selectedPlaylist?.id || ''}
-                    onChange={(e) => {
-                      const playlist = playlists.find(p => p.id === e.target.value);
-                      setSelectedPlaylist(playlist);
-                    }}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
-                  >
-                    <option value="">No playlist</option>
-                    {playlists.map(playlist => (
-                      <option key={playlist.id} value={playlist.id}>
-                        {playlist.name}
-                      </option>
-                    ))}
-                  </select>
+              {/* Timer Duration Section */}
+              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                <h4 className="text-white/80 text-sm font-medium mb-3">Timer Durations</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-white/70 text-xs mb-2">Work (min)</label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="60"
+                      value={workTime}
+                      onChange={(e) => setWorkTime(Number(e.target.value))}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white/70 text-xs mb-2">Short Break</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="30"
+                      value={shortBreakTime}
+                      onChange={(e) => setShortBreakTime(Number(e.target.value))}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white/70 text-xs mb-2">Long Break</label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="60"
+                      value={longBreakTime}
+                      onChange={(e) => setLongBreakTime(Number(e.target.value))}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                    />
+                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* Spotify Playlists Section */}
+              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                <div className="flex items-center gap-2 mb-3">
+                  <Music size={16} className="text-green-400" />
+                  <h4 className="text-white/80 text-sm font-medium">Spotify Playlists</h4>
+                </div>
+                
+                {!isSpotifyConnected ? (
+                  <div className="text-center py-4">
+                    <p className="text-white/50 text-sm mb-3">
+                      Connect to Spotify to select playlists
+                    </p>
+                    <button
+                      onClick={connectSpotify}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white text-sm transition-colors"
+                    >
+                      Connect Spotify
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Work Playlist */}
+                    <div>
+                      <label className="block text-white/70 text-xs mb-2">Study Session Playlist</label>
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          placeholder="https://open.spotify.com/playlist/..."
+                          value={workPlaylistUrl}
+                          onChange={(e) => setWorkPlaylistUrl(e.target.value)}
+                          className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40"
+                        />
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setWorkPlaylistUrl(`https://open.spotify.com/playlist/${e.target.value}`);
+                            }
+                          }}
+                          className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded-lg text-white"
+                          value=""
+                        >
+                          <option value="" className="bg-gray-800">Choose from your playlists...</option>
+                          {playlists.map((playlist) => (
+                            <option key={playlist.id} value={playlist.id} className="bg-gray-800">
+                              {playlist.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Break Playlist */}
+                    <div>
+                      <label className="block text-white/70 text-xs mb-2">Break Time Playlist</label>
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          placeholder="https://open.spotify.com/playlist/..."
+                          value={breakPlaylistUrl}
+                          onChange={(e) => setBreakPlaylistUrl(e.target.value)}
+                          className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40"
+                        />
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setBreakPlaylistUrl(`https://open.spotify.com/playlist/${e.target.value}`);
+                            }
+                          }}
+                          className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded-lg text-white"
+                          value=""
+                        >
+                          <option value="" className="bg-gray-800">Choose from your playlists...</option>
+                          {playlists.map((playlist) => (
+                            <option key={playlist.id} value={playlist.id} className="bg-gray-800">
+                              {playlist.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="flex gap-3">
+            {/* Apply/Cancel Buttons */}
+            <div className="flex gap-3 mt-6 pt-4 border-t border-white/10">
               <button
                 onClick={() => {
                   // Apply settings
@@ -354,13 +511,13 @@ function App() {
                   else setTimeLeft(longBreakTime * 60);
                   setShowSettings(false);
                 }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 py-2 rounded-lg transition-colors"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 py-3 rounded-lg transition-colors font-medium"
               >
-                Apply
+                Apply Settings
               </button>
               <button
                 onClick={() => setShowSettings(false)}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 py-2 rounded-lg transition-colors"
+                className="flex-1 bg-gray-600 hover:bg-gray-700 py-3 rounded-lg transition-colors font-medium"
               >
                 Cancel
               </button>
