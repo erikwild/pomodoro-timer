@@ -73,6 +73,9 @@ const App = () => {
       console.error('Error initializing Spotify:', error);
     }
   };
+console.log('Client ID:', import.meta.env.VITE_SPOTIFY_CLIENT_ID);
+console.log('Redirect URI:', import.meta.env.VITE_SPOTIFY_REDIRECT_URI);
+console.log('Current URL:', window.location.origin);
 
   // Check playback state periodically
   const startPlaybackCheck = () => {
