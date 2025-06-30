@@ -580,7 +580,7 @@ className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-
                           }}
                           className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white"
                         >
-                          <option value="" className="bg-gray-800">Choose from your playlists...</option>
+                          <option value="" className="bg-gray-800">Choose from your own spotify playlists...</option>
                           {userPlaylists.map((playlist) => (
                             <option key={playlist.id} value={playlist.id} className="bg-gray-800">
                               {playlist.name}
