@@ -50,7 +50,7 @@ npm install
 3. Fill in the details:
    - **App name**: Pomodoro Timer (or whatever you prefer)
    - **App description**: Personal Pomodoro timer with Spotify integration
-   - **Redirect URI**: `https://localhost:3000`
+   - **Redirect URI**: `https://pomodoro-timer-4km.pages.dev`
    - **API/SDKs**: Web API
 4. Save your app and copy the **Client ID**
 
@@ -62,7 +62,7 @@ cp .env.example .env
 Edit `.env` and add your Spotify Client ID:
 ```bash
 VITE_SPOTIFY_CLIENT_ID=your_client_id_from_step_2
-VITE_SPOTIFY_REDIRECT_URI=https://localhost:3000
+VITE_SPOTIFY_REDIRECT_URI=https://pomodoro-timer-4km.pages.dev
 ```
 
 ### 4. Run the App
