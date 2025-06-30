@@ -38,8 +38,6 @@ const App = () => {
   const [workPlaylistId, setWorkPlaylistId] = useState('');
   const [breakPlaylistId, setBreakPlaylistId] = useState('');
   const [userPlaylists, setUserPlaylists] = useState([]);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState(null);
 
   const intervalRef = useRef(null);
   const playbackCheckRef = useRef(null);
