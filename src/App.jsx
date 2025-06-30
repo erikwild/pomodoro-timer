@@ -263,12 +263,6 @@ const App = () => {
     }
   };
 
-  const presets = [
-    { name: 'Classic', work: 25, break: 5 },
-    { name: 'Extended', work: 45, break: 15 },
-    { name: 'Power Hour', work: 50, break: 10 },
-    { name: 'Quick Sprint', work: 15, break: 3 }
-  ];
 
   const progress = isWorkSession 
     ? ((workDuration * 60 - timeLeft) / (workDuration * 60)) * 100
@@ -480,48 +474,28 @@ const App = () => {
               </div>
               
               <div className="space-y-4">
-                {/* Quick Presets */}
-                <div>
-                  <label className="block text-white/80 text-sm mb-2">Quick Presets</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {presets.map((preset) => (
-                      <button
-                        key={preset.name}
-                        onClick={() => {
-                          setWorkDuration(preset.work);
-                          setBreakDuration(preset.break);
-                        }}
-                        className="p-2 text-xs bg-white/10 hover:bg-white/20 rounded text-white transition-all duration-200"
-                      >
-                        {preset.name}<br />
-                        <span className="text-white/60">{preset.work}/{preset.break}min</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Custom Durations */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-white/80 text-sm mb-1">Work (min)</label>
+                    <label className="block text-white/80 text-lg mb-2">Work (min)</label>
                     <input
                       type="number"
                       min="5"
                       max="60"
                       value={workDuration}
                       onChange={(e) => setWorkDuration(parseInt(e.target.value) || 25)}
-                      className="w-full p-2 bg-white/10 border border-white/20 rounded text-white placeholder-white/50"
+                      className="w-full p-4 text-lg bg-white/10 border border-white/20 rounded text-white placeholder-white/50"
                     />
                   </div>
                   <div>
-                    <label className="block text-white/80 text-sm mb-1">Break (min)</label>
+                    <label className="block text-white/80 text-lg mb-2">Break (min)</label>
                     <input
                       type="number"
                       min="1"
                       max="30"
                       value={breakDuration}
                       onChange={(e) => setBreakDuration(parseInt(e.target.value) || 5)}
-                      className="w-full p-2 bg-white/10 border border-white/20 rounded text-white placeholder-white/50"
+                      className="w-full p-4 text-lg bg-white/10 border border-white/20 rounded text-white placeholder-white/50"
                     />
                   </div>
                 </div>
@@ -552,69 +526,51 @@ const App = () => {
                   {/* Work Playlist */}
                   <div>
                     <label className="block text-white/70 text-xs mb-1">Work Session Playlist</label>
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        placeholder="https://open.spotify.com/playlist/..."
-                        value={workPlaylistUrl}
-                        onChange={(e) => setWorkPlaylistUrl(e.target.value)}
-                        className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white placeholder-white/50"
-                      />
-                      {isAuthenticated && (
-                        <select
-                          value={workPlaylistId}
-                          onChange={(e) => {
-                            const playlistId = e.target.value;
-                            setWorkPlaylistId(playlistId);
-                            if (playlistId) {
-                              setWorkPlaylistUrl(`https://open.spotify.com/playlist/${playlistId}`);
-                            }
-                          }}
-                          className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white"
-                        >
-                          <option value="" className="bg-gray-800">Choose from your playlists...</option>
-                          {userPlaylists.map((playlist) => (
-                            <option key={playlist.id} value={playlist.id} className="bg-gray-800">
-                              {playlist.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
+                    {isAuthenticated && (
+                      <select
+                        value={workPlaylistId}
+                        onChange={(e) => {
+                          const playlistId = e.target.value;
+                          setWorkPlaylistId(playlistId);
+                          if (playlistId) {
+                            setWorkPlaylistUrl(`https://open.spotify.com/playlist/${playlistId}`);
+                          }
+                        }}
+                        className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white"
+                      >
+                        <option value="" className="bg-gray-800">Choose from your playlists...</option>
+                        {userPlaylists.map((playlist) => (
+                          <option key={playlist.id} value={playlist.id} className="bg-gray-800">
+                            {playlist.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   {/* Break Playlist */}
                   <div>
                     <label className="block text-white/70 text-xs mb-1">Break Playlist</label>
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        placeholder="https://open.spotify.com/playlist/..."
-                        value={breakPlaylistUrl}
-                        onChange={(e) => setBreakPlaylistUrl(e.target.value)}
-                        className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white placeholder-white/50"
-                      />
-                      {isAuthenticated && (
-                        <select
-                          value={breakPlaylistId}
-                          onChange={(e) => {
-                            const playlistId = e.target.value;
-                            setBreakPlaylistId(playlistId);
-                            if (playlistId) {
-                              setBreakPlaylistUrl(`https://open.spotify.com/playlist/${playlistId}`);
-                            }
-                          }}
-                          className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white"
-                        >
-                          <option value="" className="bg-gray-800">Choose from your Spotify playlists...</option>
-                          {userPlaylists.map((playlist) => (
-                            <option key={playlist.id} value={playlist.id} className="bg-gray-800">
-                              {playlist.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
+                    {isAuthenticated && (
+                      <select
+                        value={breakPlaylistId}
+                        onChange={(e) => {
+                          const playlistId = e.target.value;
+                          setBreakPlaylistId(playlistId);
+                          if (playlistId) {
+                            setBreakPlaylistUrl(`https://open.spotify.com/playlist/${playlistId}`);
+                          }
+                        }}
+                        className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white"
+                      >
+                        <option value="" className="bg-gray-800">Choose from your Spotify playlists...</option>
+                        {userPlaylists.map((playlist) => (
+                          <option key={playlist.id} value={playlist.id} className="bg-gray-800">
+                            {playlist.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                   
                   {!isAuthenticated && (
