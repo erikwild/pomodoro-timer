@@ -326,7 +326,7 @@ const App = () => {
         </div>
 
         {/* Progress Ring */}
-        <div className="relative w-20 h-20 mx-auto mb-4">
+        <div className="relative w-24 h-24 mx-auto mb-4">
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
             <circle
               cx="50"
@@ -440,9 +440,8 @@ const App = () => {
         {/* Settings Modal */}
         {showSettings && (
           <div 
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
             onClick={() => setShowSettings(false)}
-            style={{zIndex: 9999}}
           >
             <div 
               className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 w-full max-w-md shadow-2xl border border-white/20 max-h-[80vh] overflow-y-auto custom-scrollbar"
