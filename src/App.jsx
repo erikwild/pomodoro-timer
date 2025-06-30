@@ -279,7 +279,7 @@ const App = () => {
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 w-full max-w-md shadow-2xl border border-white/10">
         
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-full ${isWorkSession ? 'bg-emerald-500/20' : 'bg-orange-500/20'}`}>
@@ -290,12 +290,12 @@ const App = () => {
                 )}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">
+                <h1 className="text-xl font-bold text-white">
                   {isWorkSession ? 'Focus Time' : 'Break Time'}
                 </h1>
                 <p className="text-white/60 text-sm">Session {completedSessions + 1}</p>
                 {isAuthenticated && userProfile && (
-                  <p className="text-emerald-400 text-sm font-medium mt-1">
+                  <p className="text-emerald-400 text-xs font-medium">
                     Hello, {userProfile.display_name || userProfile.id}!
                   </p>
                 )}
@@ -332,84 +332,54 @@ const App = () => {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Main Timer Display */}
-        <div className="relative mb-8">
-          {/* Outer Ring */}
-          <div className="relative w-64 h-64 mx-auto">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
-              {/* Background circle */}
-              <circle
-                cx="100"
-                cy="100"
-                r="90"
-                stroke="rgba(255,255,255,0.05)"
-                strokeWidth="4"
-                fill="none"
-              />
-              {/* Progress circle */}
-              <circle
-                cx="100"
-                cy="100"
-                r="90"
-                stroke={isWorkSession ? "url(#workGradient)" : "url(#breakGradient)"}
-                strokeWidth="4"
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 90}`}
-                strokeDashoffset={`${2 * Math.PI * 90 * (1 - progress / 100)}`}
-                className="transition-all duration-500 ease-out"
-              />
-              {/* Inner decorative circle */}
-              <circle
-                cx="100"
-                cy="100"
-                r="75"
-                stroke="rgba(255,255,255,0.1)"
-                strokeWidth="1"
-                fill="none"
-                strokeDasharray="2 4"
-              />
-              
-              {/* Gradient definitions */}
-              <defs>
-                <linearGradient id="workGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#10b981" />
-                  <stop offset="100%" stopColor="#059669" />
-                </linearGradient>
-                <linearGradient id="breakGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#f97316" />
-                  <stop offset="100%" stopColor="#ea580c" />
-                </linearGradient>
-              </defs>
-            </svg>
-            
-            {/* Center content */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center p-8">
-                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${isWorkSession ? 'bg-emerald-500/20' : 'bg-orange-500/20'}`}>
-                  {isWorkSession ? (
-                    <Clock className={`${isWorkSession ? 'text-emerald-400' : 'text-orange-400'}`} size={32} />
-                  ) : (
-                    <Coffee className={`${isWorkSession ? 'text-emerald-400' : 'text-orange-400'}`} size={32} />
-                  )}
+          
+          {/* Timer next to profile */}
+          <div className="flex items-center justify-between">
+            {/* Compact Timer Display */}
+            <div className="flex items-center gap-4">
+              <div className="relative w-24 h-24">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    stroke="rgba(255,255,255,0.1)"
+                    strokeWidth="6"
+                    fill="none"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    stroke={isWorkSession ? "#10b981" : "#f97316"}
+                    strokeWidth="6"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeDasharray={`${2 * Math.PI * 40}`}
+                    strokeDashoffset={`${2 * Math.PI * 40 * (1 - progress / 100)}`}
+                    className="transition-all duration-500"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-lg font-mono font-bold text-white">
+                      {formatTime(timeLeft)}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-5xl font-bold text-white mb-2 font-mono tracking-wider">
-                  {formatTime(timeLeft)}
-                </div>
-                <div className="text-white/60 text-lg font-medium">
+              </div>
+              <div>
+                <div className="text-white/80 text-sm font-medium">
                   {isWorkSession ? `${workDuration} min work` : `${breakDuration} min break`}
                 </div>
-                <div className="mt-2">
-                  <div className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${isWorkSession ? 'bg-emerald-500/20 text-emerald-300' : 'bg-orange-500/20 text-orange-300'}`}>
-                    {Math.round(progress)}% complete
-                  </div>
+                <div className={`text-xs font-medium mt-1 ${isWorkSession ? 'text-emerald-400' : 'text-orange-400'}`}>
+                  {Math.round(progress)}% complete
                 </div>
               </div>
             </div>
           </div>
         </div>
+
 
         {/* Controls */}
         <div className="flex justify-center gap-2 mb-3">
