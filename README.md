@@ -1,5 +1,7 @@
 # 🍅🎵 Pomodoro Spotify Timer
 
+### check it out at pomodoro.erikwild.com
+
 A beautiful, customizable Pomodoro timer with full Spotify Web API integration. Control your music directly from the timer, automatically switch playlists between work and break sessions, and boost your productivity with the perfect soundtrack.
 
 ## ✨ Features

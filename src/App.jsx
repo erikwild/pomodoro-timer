@@ -460,7 +460,7 @@ const App = () => {
         {/* Settings Modal */}
         {showSettings && (
           <div 
-className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
             onClick={() => setShowSettings(false)}
           >
             <div 
@@ -562,9 +562,12 @@ className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-
                       />
                       {isAuthenticated && (
                         <select
+                          value={workPlaylistId}
                           onChange={(e) => {
-                            if (e.target.value) {
-                              setWorkPlaylistUrl(`https://open.spotify.com/playlist/${e.target.value}`);
+                            const playlistId = e.target.value;
+                            setWorkPlaylistId(playlistId);
+                            if (playlistId) {
+                              setWorkPlaylistUrl(`https://open.spotify.com/playlist/${playlistId}`);
                             }
                           }}
                           className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white"
@@ -593,9 +596,12 @@ className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-
                       />
                       {isAuthenticated && (
                         <select
+                          value={breakPlaylistId}
                           onChange={(e) => {
-                            if (e.target.value) {
-                              setBreakPlaylistUrl(`https://open.spotify.com/playlist/${e.target.value}`);
+                            const playlistId = e.target.value;
+                            setBreakPlaylistId(playlistId);
+                            if (playlistId) {
+                              setBreakPlaylistUrl(`https://open.spotify.com/playlist/${playlistId}`);
                             }
                           }}
                           className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded text-white"
