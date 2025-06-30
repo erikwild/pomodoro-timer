@@ -326,7 +326,7 @@ const App = () => {
         </div>
 
         {/* Progress Ring */}
-        <div className="relative w-32 h-32 mx-auto mb-6">
+        <div className="relative w-24 h-24 mx-auto mb-6">
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
             <circle
               cx="50"
@@ -351,10 +351,10 @@ const App = () => {
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
-              <div className="text-2xl font-mono font-bold text-white mb-2">
+              <div className="text-lg font-mono font-bold text-white mb-1">
                 {formatTime(timeLeft)}
               </div>
-              <div className="text-white/60 text-sm">
+              <div className="text-white/60 text-xs">
                 {isWorkSession ? `${workDuration}min work` : `${breakDuration}min break`}
               </div>
             </div>
