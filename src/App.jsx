@@ -77,7 +77,8 @@ const App = () => {
         setSelectedDevice(activeDevice.id);
       }
 
-      // Start checking playback state
+      // Get initial playback state and start checking periodically
+      updatePlaybackState();
       startPlaybackCheck();
     } catch (error) {
       console.error('Error initializing Spotify:', error);
@@ -269,11 +270,26 @@ const App = () => {
         await spotify.pause();
         setIsPlaying(false);
       } else {
-        await spotify.play();
+        // When starting playback, use the current session's playlist if available
+        const currentPlaylistUrl = isWorkSession ? workPlaylistUrl : breakPlaylistUrl;
+        const currentPlaylistId = isWorkSession ? workPlaylistId : breakPlaylistId;
+        
+        if (currentPlaylistId && selectedDevice) {
+          // Play the current session's playlist
+          await spotify.play(selectedDevice, `spotify:playlist:${currentPlaylistId}`);
+        } else if (currentPlaylistId) {
+          // Play without specific device
+          await spotify.play(null, `spotify:playlist:${currentPlaylistId}`);
+        } else {
+          // Just resume current playback if no playlist is set
+          await spotify.play();
+        }
         setIsPlaying(true);
       }
     } catch (error) {
       console.error('Error controlling playback:', error);
+      // Update playback state in case of error
+      updatePlaybackState();
     }
   };
 
