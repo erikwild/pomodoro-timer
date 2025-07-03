@@ -377,7 +377,7 @@ const App = () => {
           <div className="flex items-center justify-between">
             {/* Compact Timer Display */}
             <div className="flex items-center gap-4">
-              <div className="relative w-24 h-24 flex-shrink-0">
+              <div className="relative w-60 h-60 flex-shrink-0">
                 <svg 
                   className="absolute inset-0 transform -rotate-90" 
                   width="96" 
