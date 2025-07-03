@@ -247,6 +247,13 @@ class SpotifyAPI {
     });
   }
 
+  // Set shuffle state
+  async setShuffle(state) {
+    await this.apiRequest(`/me/player/shuffle?state=${state}`, {
+      method: 'PUT',
+    });
+  }
+
   // Get playlist details
   async getPlaylist(playlistId) {
     return await this.apiRequest(`/playlists/${playlistId}`);

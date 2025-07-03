@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Settings, Music, Clock, Coffee, LogIn, LogOut, Volume2, SkipForward } from 'lucide-react';
+import { Play, Pause, RotateCcw, Settings, Music, Clock, Coffee, LogIn, LogOut, Volume2, SkipForward, Shuffle } from 'lucide-react';
 import SpotifyAPI from './services/spotify';
 
 const App = () => {
@@ -27,6 +27,10 @@ const App = () => {
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [volume, setVolume] = useState(50);
+  const [isShuffled, setIsShuffled] = useState(() => {
+    const saved = localStorage.getItem('pomodoro-shuffle-enabled');
+    return saved ? JSON.parse(saved) : true; // Default to true (shuffled)
+  });
 
   // Playlist state
   const [workPlaylistUrl, setWorkPlaylistUrl] = useState(() => {
@@ -94,6 +98,10 @@ const App = () => {
           setCurrentTrack(playback.item);
           setIsPlaying(playback.is_playing);
           setVolume(playback.device.volume_percent);
+          // Update shuffle state if available
+          if (playback.shuffle_state !== undefined) {
+            setIsShuffled(playback.shuffle_state);
+          }
         }
       } catch (error) {
         console.error('Error checking playback:', error);
@@ -125,6 +133,10 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem('pomodoro-break-playlist', breakPlaylistUrl);
   }, [breakPlaylistUrl]);
+
+  useEffect(() => {
+    localStorage.setItem('pomodoro-shuffle-enabled', JSON.stringify(isShuffled));
+  }, [isShuffled]);
 
   // Update timeLeft when durations change
   useEffect(() => {
@@ -221,22 +233,16 @@ const App = () => {
       } else {
         await spotify.play(null, `spotify:playlist:${playlistId}`);
       }
+      // Enable shuffle if it's enabled in settings
+      if (isShuffled) {
+        await spotify.setShuffle(true);
+      }
     } catch (error) {
       console.error('Error switching playlist:', error);
     }
   };
 
-  const togglePlayback = async () => {
-    try {
-      if (isPlaying) {
-        await spotify.pause();
-      } else {
-        await spotify.play(selectedDevice);
-      }
-    } catch (error) {
-      console.error('Error toggling playback:', error);
-    }
-  };
+
 
   const handleVolumeChange = async (newVolume) => {
     setVolume(newVolume);
@@ -284,6 +290,12 @@ const App = () => {
           // Just resume current playback if no playlist is set
           await spotify.play();
         }
+        
+        // Set shuffle state when starting playback
+        if (isShuffled) {
+          await spotify.setShuffle(true);
+        }
+        
         setIsPlaying(true);
       }
     } catch (error) {
@@ -293,12 +305,25 @@ const App = () => {
     }
   };
 
+  const toggleShuffle = async () => {
+    try {
+      const newShuffleState = !isShuffled;
+      await spotify.setShuffle(newShuffleState);
+      setIsShuffled(newShuffleState);
+    } catch (error) {
+      console.error('Error toggling shuffle:', error);
+    }
+  };
+
   const updatePlaybackState = async () => {
     try {
       const playback = await spotify.getCurrentPlayback();
       if (playback) {
         setIsPlaying(playback.is_playing);
         setCurrentTrack(playback.item);
+        if (playback.shuffle_state !== undefined) {
+          setIsShuffled(playback.shuffle_state);
+        }
       } else {
         setIsPlaying(false);
         setCurrentTrack(null);
@@ -453,17 +478,30 @@ const App = () => {
             <SkipForward size={20} className="text-white" />
           </button>
           {isAuthenticated && (
-            <button
-              onClick={handlePlayPause}
-              className={`p-3 rounded-full transition-all duration-200 shadow-lg ${
-                isPlaying 
-                  ? 'bg-orange-500 hover:bg-orange-600' 
-                  : 'bg-green-500 hover:bg-green-600'
-              }`}
-              title={isPlaying ? 'Pause music' : 'Play music'}
-            >
-              {isPlaying ? <Pause size={20} className="text-white" /> : <Play size={20} className="text-white" />}
-            </button>
+            <>
+              <button
+                onClick={handlePlayPause}
+                className={`p-3 rounded-full transition-all duration-200 shadow-lg ${
+                  isPlaying 
+                    ? 'bg-orange-500 hover:bg-orange-600' 
+                    : 'bg-green-500 hover:bg-green-600'
+                }`}
+                title={isPlaying ? 'Pause music' : 'Play music'}
+              >
+                {isPlaying ? <Pause size={20} className="text-white" /> : <Play size={20} className="text-white" />}
+              </button>
+              <button
+                onClick={toggleShuffle}
+                className={`p-3 rounded-full transition-all duration-200 shadow-lg ${
+                  isShuffled 
+                    ? 'bg-purple-500 hover:bg-purple-600' 
+                    : 'bg-gray-500 hover:bg-gray-600'
+                }`}
+                title={isShuffled ? 'Shuffle on' : 'Shuffle off'}
+              >
+                <Shuffle size={20} className={`text-white ${isShuffled ? 'opacity-100' : 'opacity-50'}`} />
+              </button>
+            </>
           )}
           <button
             onClick={() => setShowSettings(!showSettings)}
@@ -476,17 +514,9 @@ const App = () => {
         {/* Spotify Playback Controls */}
         {isAuthenticated && (
           <div className="mb-4 p-4 bg-white/5 rounded-lg border border-white/10">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Music size={16} className="text-green-400" />
-                <span className="text-white/80 text-sm font-medium">Spotify</span>
-              </div>
-              <button
-                onClick={togglePlayback}
-                className="p-2 rounded-full bg-green-600 hover:bg-green-700 transition-colors"
-              >
-                {isPlaying ? <Pause size={16} className="text-white" /> : <Play size={16} className="text-white" />}
-              </button>
+            <div className="flex items-center gap-2 mb-3">
+              <Music size={16} className="text-green-400" />
+              <span className="text-white/80 text-sm font-medium">Spotify</span>
             </div>
             
             {currentTrack && (
@@ -564,6 +594,29 @@ const App = () => {
                     />
                   </div>
                 </div>
+
+                {/* Shuffle Setting */}
+                {isAuthenticated && (
+                  <div>
+                    <label className="block text-white/80 text-sm mb-2">Music Playback</label>
+                    <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/20 rounded">
+                      <Shuffle size={16} className={`${isShuffled ? 'text-purple-400' : 'text-white/40'}`} />
+                      <span className="text-white/80 text-sm flex-1">Enable shuffle by default</span>
+                      <button
+                        onClick={toggleShuffle}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${
+                          isShuffled ? 'bg-purple-500' : 'bg-white/20'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                            isShuffled ? 'translate-x-6' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Spotify Device Selection */}
                 {isAuthenticated && devices.length > 0 && (
